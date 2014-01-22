@@ -3,10 +3,10 @@ package main
 // This is a go script illustrating how to use goroutine and channel to
 // do multi-tasks.
 //
-// It use the producer-consumer model.
+// It uses the producer-consumer model.
 //
 //
-// Author: Wei Shen <shenwei//gmail.com>
+// Author: Wei Shen <shenwei#gmail.com>
 // Site:   http://shenwei.me https://github.com/shenwei356
 //
 
