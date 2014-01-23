@@ -6,7 +6,7 @@ package main
 // It uses the producer-consumer model.
 //
 //
-// Author: Wei Shen <shenwei#gmail.com>
+// Author: Wei Shen <shenwei356#gmail.com>
 // Site:   http://shenwei.me https://github.com/shenwei356
 //
 
