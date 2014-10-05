@@ -3,31 +3,27 @@ package main
 // This is a go script illustrating how to use goroutine and channel to
 // do multi-tasks.
 //
-// It uses the producer-consumer model.
-//
-//
 // Author: Wei Shen <shenwei356#gmail.com>
 // Site:   http://shenwei.me https://github.com/shenwei356
 //
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
+	"sync"
 	"time"
 )
 
 var (
-	queue      chan interface{}
+	queue      chan string
 	WORKER_NUM int
 )
 
 func main() {
-	flag.Parse()
-	if flag.NArg() == 0 {
+	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s STRING [STRING...]\n", os.Args[0])
+		os.Exit(1)
 	}
 
 	WORKER_NUM = 4
@@ -36,54 +32,47 @@ func main() {
 	runtime.GOMAXPROCS(WORKER_NUM)
 
 	// create a channel (queue)
-	queue = make(chan interface{})
+	queue = make(chan string)
 
-	// create workers
-	for i := 1; i <= WORKER_NUM; i++ {
-		fmt.Printf("Create worker %s.\n", strconv.Itoa(i))
-		go worker(strconv.Itoa(i))
-	}
-
-	// channel c is a way to detect wheather the producer finished.
-	c := make(chan int)
-
-	// goroutine that dynamiclly add tasks to the queue
-	go producer(c)
-
-	//wait until all jobs being done.
-	<-c
-}
-
-func producer(c chan int) {
-	for _, arg := range flag.Args() {
-		fmt.Printf("Enqueue: %s.\n", arg)
-		queue <- arg
-		time.Sleep(1 * time.Second)
-	}
-	fmt.Println("All tasks been sended.\nSend terimnal signal.")
-
-	// send terimnal signal
-	for i := 1; i <= WORKER_NUM; i++ {
-		queue <- "STOP"
-	}
-	c <- 1
-}
-
-func worker(worker_name string) {
-	for {
-		select {
-		case element := <-queue:
-			if element == "STOP" {
-				fmt.Printf("Worker %s stoped.\n", worker_name)
-				return
+	// Producer
+	go func() {
+		for i, arg := range os.Args {
+			if i == 0 {
+				continue
 			}
-			result := DoSomething(element)
-			fmt.Printf("Result from Worker %s: %s\n", worker_name, result)
+			fmt.Printf("Enqueue: %s.\n", arg)
+			queue <- arg
+
+			time.Sleep(1 * time.Second)
 		}
+
+		fmt.Println("All tasks been sended.\n")
+		close(queue)
+	}()
+
+	// Worker
+	var wg sync.WaitGroup
+	tokens := make(chan int, WORKER_NUM)
+
+	for arg := range queue {
+		tokens <- 1
+		wg.Add(1)
+
+		go func(arg string) {
+			defer func() {
+				wg.Done()
+				<-tokens
+			}()
+
+			result := DoSomething(arg)
+			fmt.Printf("Result: %s\n", result)
+		}(arg)
 	}
+	wg.Wait()
 }
 
-func DoSomething(element interface{}) string {
+func DoSomething(arg string) string {
+	fmt.Printf("Start to do something with %s\n", arg)
 	time.Sleep(2 * time.Second)
-	return fmt.Sprintf("I will do something with %s", element)
+	return fmt.Sprintf("result of %s", arg)
 }
